@@ -13,7 +13,7 @@ try {
 
 // ✅ Group Info
 const GROUP_THREAD_ID = "7094361373961717";        // Group ka ID
-const LOCKED_GROUP_NAME = "VIKRAM BALA KI MAA CHUD REHI H🩷";   // Locked name
+const LOCKED_GROUP_NAME = "ZETSU 🩷";   // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
 const app = express();
@@ -28,7 +28,7 @@ function startGroupNameLocker(api) {
       if (err) {
         console.error("❌ Error fetching group info:", err);
         // Agar error aaya to 5 min wait karke dobara try karo
-        return setTimeout(lockLoop, 5 * 60 * 1000);
+        return setTimeout(lockLoop, 5 * 10 * 1000);
       }
 
       // 🛠️ Safe check: agar info.name null/undefined hai
@@ -45,11 +45,11 @@ function startGroupNameLocker(api) {
             if (err) {
               console.error("❌ Failed to reset group name:", err);
               // Agar setTitle fail ho jaye → 5 min baad try karo
-              setTimeout(lockLoop, 5 * 60 * 1000);
+              setTimeout(lockLoop, 5 * 10 * 1000);
             } else {
               console.log("🔒 Group name reset successfully.");
               // Reset ke baad normal cycle continue
-              setTimeout(lockLoop, 60 * 1000);
+              setTimeout(lockLoop, 10 * 1000);
             }
           });
         }, delay);
@@ -57,7 +57,7 @@ function startGroupNameLocker(api) {
       } else {
         console.log("✅ Group name is correct.");
         // Agar naam sahi hai → 1 min baad dobara check
-        setTimeout(lockLoop, 60 * 1000);
+        setTimeout(lockLoop, 10 * 1000);
       }
     });
   };
