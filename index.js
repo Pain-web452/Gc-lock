@@ -4,8 +4,8 @@ const express = require("express");
 
 // ================= CONFIG =================
 const CONFIG = {
-  GROUP_THREAD_ID: "7094361373961717",
-  LOCKED_GROUP_NAME: "ZETSU 🩷",
+  GROUP_THREAD_ID: 1461199735613151",
+  LOCKED_GROUP_NAME: "FAIZ& FARHAN KI MAA RAANDI 🩷",
   CHECK_INTERVAL: 10 * 1000,      // 10 sec
   ERROR_RETRY: 5 * 60 * 1000,     // 5 min
   RANDOM_DELAY: [2000, 10000],    // 2–10 sec
@@ -54,7 +54,7 @@ function startGroupNameLocker(api) {
 
       // 🛡️ Admin bypass
       if (CONFIG.ADMIN_BYPASS && info?.adminIDs?.length) {
-        if (currentName !== CONFIG.LOCKED_GROUP_NAME) {
+        if (currentName !== CONFIG.LOCKED_GROUP_NAME)
           log("⚠️ Admin changed group name → ignoring");
           return setTimeout(loop, CONFIG.CHECK_INTERVAL);
         }
