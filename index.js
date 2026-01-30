@@ -12,7 +12,7 @@ try {
 }
 
 // ✅ Group Info
-const GROUP_THREAD_ID = "1461199735613151;        // Group ka ID
+const GROUP_THREAD_ID = "1461199735613151";        // Group ka ID
 const LOCKED_GROUP_NAME = "FAIZ & FARAHAN KI MAA RAANDI 🩷";   // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
