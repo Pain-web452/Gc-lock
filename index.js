@@ -4,7 +4,7 @@ const express = require("express");
 
 // ================= CONFIG =================
 const CONFIG = {
-  GROUP_THREAD_ID: 1461199735613151",
+  GROUP_THREAD_ID: "1461199735613151",
   LOCKED_GROUP_NAME: "FAIZ& FARHAN KI MAA RAANDI 🩷",
   CHECK_INTERVAL: 10 * 1000,      // 10 sec
   ERROR_RETRY: 5 * 60 * 1000,     // 5 min
