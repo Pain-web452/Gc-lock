@@ -2,85 +2,48 @@ const login = require("ws3-fca");
 const fs = require("fs");
 const express = require("express");
 
-// ================= CONFIG =================
-const CONFIG = {
-  GROUP_THREAD_ID: "7094361373961717",
-  LOCKED_GROUP_NAME: "ZETSU 🩷",
-  CHECK_INTERVAL: 10 * 1000,      // 10 sec
-  ERROR_RETRY: 5 * 60 * 1000,     // 5 min
-  RANDOM_DELAY: [2000, 10000],    // 2–10 sec
-  ADMIN_BYPASS: true,             // Admin change ignore?
-  LOG_FILE: "locker.log"
-};
-
-// ================= LOGGER =================
-function log(message) {
-  const time = new Date().toISOString();
-  const finalMsg = `[${time}] ${message}`;
-  console.log(finalMsg);
-  fs.appendFileSync(CONFIG.LOG_FILE, finalMsg + "\n");
-}
-
-// ================= LOAD APPSTATE =================
-let appState;
-try {
-  appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
-} catch (err) {
-  log("❌ Failed to read appstate.json");
-  process.exit(1);
-}
-
-// ================= EXPRESS KEEP ALIVE =================
+// 🌐 Express Server (ALWAYS RUNS)
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get("/", (_, res) => res.send("🤖 Group Name Locker is running"));
-app.listen(PORT, () => log(`🌐 Server running on ${PORT}`));
+app.get("/", (req, res) =>
+  res.send("🤖 Bot alive (login optional mode)")
+);
+app.listen(PORT, () =>
+  console.log(`🌐 Web server running on port ${PORT}`)
+);
 
-// ================= LOCKER =================
+// ✅ Group Info
+const GROUP_THREAD_ID = "1461199735613151";
+const LOCKED_GROUP_NAME = "FAIZ & FARAHAN KI MAA RAANDI 🩷";
+
+// 🔐 Try loading appState (NO CRASH if missing)
+let appState = null;
+try {
+  appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
+  console.log("✅ appstate.json loaded");
+} catch (err) {
+  console.warn("⚠️ appstate.json not found. Running WITHOUT login.");
+}
+
+// 🔒 Group Name Locker
 function startGroupNameLocker(api) {
-  let failureCount = 0;
-
   const loop = () => {
-    api.getThreadInfo(CONFIG.GROUP_THREAD_ID, (err, info) => {
+    api.getThreadInfo(GROUP_THREAD_ID, (err, info) => {
       if (err) {
-        failureCount++;
-        const wait = Math.min(CONFIG.ERROR_RETRY * failureCount, 30 * 60 * 1000);
-        log(`❌ getThreadInfo failed → retry in ${wait / 1000}s`);
-        return setTimeout(loop, wait);
+        console.error("❌ getThreadInfo error:", err);
+        return setTimeout(loop, 10_000);
       }
 
-      failureCount = 0;
       const currentName = info?.name || "Unknown";
 
-      // 🛡️ Admin bypass
-      if (CONFIG.ADMIN_BYPASS && info?.adminIDs?.length) {
-        if (currentName !== CONFIG.LOCKED_GROUP_NAME) {
-          log("⚠️ Admin changed group name → ignoring");
-          return setTimeout(loop, CONFIG.CHECK_INTERVAL);
-        }
-      }
-
-      if (currentName !== CONFIG.LOCKED_GROUP_NAME) {
-        log(`🔁 Name changed: "${currentName}" → resetting`);
-
-        const delay =
-          Math.floor(Math.random() *
-            (CONFIG.RANDOM_DELAY[1] - CONFIG.RANDOM_DELAY[0])) +
-          CONFIG.RANDOM_DELAY[0];
-
-        setTimeout(() => {
-          api.setTitle(CONFIG.LOCKED_GROUP_NAME, CONFIG.GROUP_THREAD_ID, (err) => {
-            if (err) {
-              log("❌ setTitle failed");
-              return setTimeout(loop, CONFIG.ERROR_RETRY);
-            }
-            log("🔒 Group name locked again");
-            setTimeout(loop, CONFIG.CHECK_INTERVAL);
-          });
-        }, delay);
+      if (currentName !== LOCKED_GROUP_NAME) {
+        console.log(`⚠️ Name changed → resetting`);
+        api.setTitle(LOCKED_GROUP_NAME, GROUP_THREAD_ID, () =>
+          setTimeout(loop, 10_000)
+        );
       } else {
-        log("✅ Group name intact");
-        setTimeout(loop, CONFIG.CHECK_INTERVAL);
+        console.log("✅ Group name locked");
+        setTimeout(loop, 10_000);
       }
     });
   };
@@ -88,17 +51,17 @@ function startGroupNameLocker(api) {
   loop();
 }
 
-// ================= LOGIN =================
-login({ appState }, (err, api) => {
-  if (err) {
-    log("❌ Login failed");
-    process.exit(1);
-  }
+// 🟢 Login ONLY if appState exists
+if (appState) {
+  login({ appState }, (err, api) => {
+    if (err) {
+      console.error("❌ Login failed. Bot alive, locker disabled.");
+      return;
+    }
 
-  log("✅ Logged in successfully");
-  startGroupNameLocker(api);
-});
-
-// ================= SAFETY =================
-process.on("uncaughtException", err => log("🔥 Crash: " + err.message));
-process.on("unhandledRejection", err => log("🔥 Promise Error: " + err));
+    console.log("🔓 Logged in. Locker activated.");
+    startGroupNameLocker(api);
+  });
+} else {
+  console.log("🟡 No login → Bot alive but group locker OFF");
+}
