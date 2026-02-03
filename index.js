@@ -12,7 +12,7 @@ try {
 }
 
 // ✅ Group Info
-const GROUP_THREAD_ID = "7094361373961717";        // Group ka ID
+const GROUP_THREAD_ID = "877207874954540";        // Group ka ID
 const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";   // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
