@@ -1,93 +1,58 @@
-{
-  "checkInterval": 10000,
-  "resetDelay": 20000,
-  "groups": [
-    {
-      "threadID": "877207874954540",
-      "lockedName": "zetsu🩷",
-      "enabled": true
-    }
-  ]
-}
 const login = require("ws3-fca");
 const fs = require("fs");
 const express = require("express");
 
-process.on("unhandledRejection", err => {
-  console.error("🔥 Unhandled Rejection:", err);
-});
+const GROUP_THREAD_ID = "877207874954540";
+const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";
 
-process.on("uncaughtException", err => {
-  console.error("💥 Uncaught Exception:", err);
-});
+// 🔐 Cooldown (avoid spam)
+let lastResetTime = 0;
+const COOLDOWN = 60 * 1000; // 1 minute
 
-// ================= CONFIG =================
-const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
-const appState = JSON.parse(fs.readFileSync("./appstate.json", "utf-8"));
-
-// ================= SERVER =================
+// 🌐 Server
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => res.send("🤖 Group Name Locker Running"));
+app.listen(process.env.PORT || 3000);
 
-app.get("/", (_, res) => {
-  res.send("🤖 Advanced Group Name Locker is running");
-});
+// 📦 Load AppState
+const appState = JSON.parse(fs.readFileSync("appstate.json", "utf8"));
 
-app.listen(PORT, () =>
-  console.log(`🌐 Server running on port ${PORT}`)
-);
-
-// ================= LOCK ENGINE =================
-function startLocker(api) {
-  console.log("🔒 Group name lock system started");
-
-  const checkGroups = async () => {
-    for (const group of config.groups) {
-      if (!group.enabled) continue;
-
-      api.getThreadInfo(group.threadID, (err, info) => {
-        if (err) {
-          return console.error(`❌ Fetch error [${group.threadID}]`, err);
-        }
-
-        if (info.name !== group.lockedName) {
-          console.warn(
-            `⚠️ Name changed → "${info.name}" | Resetting soon...`
-          );
-
-          setTimeout(() => {
-            api.setTitle(group.lockedName, group.threadID, err => {
-              if (err) {
-                console.error("❌ Reset failed:", err);
-              } else {
-                console.log("🔐 Group name locked again");
-              }
-            });
-          }, config.resetDelay);
-        } else {
-          console.log(`✅ Locked OK | ${group.threadID}`);
-        }
-      });
-    }
-
-    setTimeout(checkGroups, config.checkInterval);
-  };
-
-  checkGroups();
-}
-
-// ================= LOGIN =================
 login({ appState }, (err, api) => {
-  if (err) {
-    console.error("❌ Login failed:", err);
-    return;
-  }
+  if (err) return console.error("❌ Login failed", err);
 
-  api.setOptions({
-    listenEvents: true,
-    selfListen: false
+  console.log("✅ Logged in — Name locker active");
+
+  api.listenMqtt((err, event) => {
+    if (err) return;
+
+    // 🔔 Only detect thread name change
+    if (
+      event.type === "event" &&
+      event.logMessageType === "log:thread-name" &&
+      event.threadID === GROUP_THREAD_ID
+    ) {
+      const now = Date.now();
+
+      if (now - lastResetTime < COOLDOWN) {
+        console.log("⏳ Cooldown active, skipping reset");
+        return;
+      }
+
+      lastResetTime = now;
+
+      const delay = Math.floor(Math.random() * 7000) + 3000;
+
+      console.warn("⚠️ Group name changed — resetting...");
+
+      setTimeout(() => {
+        api.setTitle(LOCKED_GROUP_NAME, GROUP_THREAD_ID, err => {
+          if (err) {
+            console.error("❌ Reset failed:", err);
+          } else {
+            console.log("🔒 Group name locked again");
+          }
+        });
+      }, delay);
+    }
   });
-
-  console.log("✅ Logged in successfully");
-  startLocker(api);
 });
