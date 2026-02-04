@@ -5,54 +5,58 @@ const express = require("express");
 const GROUP_THREAD_ID = "877207874954540";
 const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";
 
-let appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
+const appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
 
 /* 🌐 Keep Alive */
 const app = express();
-app.get("/", (_, res) => res.send("🤖 GC Name Locker Running"));
+app.get("/", (_, res) => res.send("🤖 GC Locker Alive"));
 app.listen(process.env.PORT || 3000);
 
 function startLocker(api) {
-  let busy = false;
+  let resetting = false;
   let lastReset = 0;
-  const RESET_COOLDOWN = 3 * 60 * 1000; // 3 min
+
+  const CHECK_INTERVAL = 20000;      // 20 sec
+  const RESET_DELAY = 3000;          // 3 sec (human-like)
+  const COOLDOWN = 5 * 60 * 1000;    // 5 min (ANTI BLOCK)
 
   const loop = () => {
-    if (busy) return setTimeout(loop, 15000);
+    if (resetting) return setTimeout(loop, CHECK_INTERVAL);
 
     api.getThreadInfo(GROUP_THREAD_ID, (err, info) => {
       if (err || !info) {
-        console.error("❌ getThreadInfo failed");
-        return setTimeout(loop, 30000);
+        console.error("❌ getThreadInfo error");
+        return setTimeout(loop, 60000);
       }
 
       if (info.name !== LOCKED_GROUP_NAME) {
         const now = Date.now();
-        if (now - lastReset < RESET_COOLDOWN) {
-          console.log("⏳ Cooldown active");
-          return setTimeout(loop, 15000);
+
+        if (now - lastReset < COOLDOWN) {
+          console.log("⏳ Cooldown active, skipping reset");
+          return setTimeout(loop, CHECK_INTERVAL);
         }
 
-        busy = true;
+        resetting = true;
         lastReset = now;
 
-        console.log(`⚠️ Name changed → instant reset`);
+        console.log(`⚠️ Name changed → resetting safely`);
 
         setTimeout(() => {
           api.setTitle(LOCKED_GROUP_NAME, GROUP_THREAD_ID, err => {
-            busy = false;
+            resetting = false;
 
             if (err) {
-              console.error("❌ setTitle blocked");
-              return setTimeout(loop, 60000);
+              console.error("❌ setTitle blocked → backing off");
+              return setTimeout(loop, 10 * 60 * 1000);
             }
 
-            console.log("🔒 Name restored instantly");
-            setTimeout(loop, 15000);
+            console.log("🔒 GC name restored");
+            setTimeout(loop, CHECK_INTERVAL);
           });
-        }, 2000); // ⚡ 2 sec delay
+        }, RESET_DELAY);
       } else {
-        setTimeout(loop, 15000);
+        setTimeout(loop, CHECK_INTERVAL);
       }
     });
   };
@@ -62,6 +66,6 @@ function startLocker(api) {
 
 login({ appState }, (err, api) => {
   if (err) return console.error("❌ Login failed");
-  console.log("✅ Logged in – Instant locker active");
+  console.log("✅ Logged in – Safe Instant Locker ON");
   startLocker(api);
 });
