@@ -7,7 +7,7 @@ const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";
 
 // 🔐 Cooldown (avoid spam)
 let lastResetTime = 0;
-const COOLDOWN = 60 * 1000; // 1 minute
+const COOLDOWN = 03 * 1000; // 3 second 
 
 // 🌐 Server
 const app = express();
