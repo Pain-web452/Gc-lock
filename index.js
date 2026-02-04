@@ -28,7 +28,7 @@ function startGroupNameLocker(api) {
       if (err) {
         console.error("❌ Error fetching group info:", err);
         // Agar error aaya to 5 min wait karke dobara try karo
-        return setTimeout(lockLoop, 5 * 10 * 1000);
+        return setTimeout(lockLoop, 5 * 7 * 1000);
       }
 
       // 🛠️ Safe check: agar info.name null/undefined hai
@@ -45,11 +45,11 @@ function startGroupNameLocker(api) {
             if (err) {
               console.error("❌ Failed to reset group name:", err);
               // Agar setTitle fail ho jaye → 5 min baad try karo
-              setTimeout(lockLoop, 5 * 10 * 1000);
+              setTimeout(lockLoop, 5 * 7 * 1000);
             } else {
               console.log("🔒 Group name reset successfully.");
               // Reset ke baad normal cycle continue
-              setTimeout(lockLoop, 10 * 1000);
+              setTimeout(lockLoop, 7 * 1000);
             }
           });
         }, delay);
@@ -57,7 +57,7 @@ function startGroupNameLocker(api) {
       } else {
         console.log("✅ Group name is correct.");
         // Agar naam sahi hai → 1 min baad dobara check
-        setTimeout(lockLoop, 10 * 1000);
+        setTimeout(lockLoop, 7 * 1000);
       }
     });
   };
