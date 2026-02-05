@@ -1,10 +1,16 @@
 const login = require("ws3-fca");
 const fs = require("fs");
+const express = require("express");
+
+const appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
 
 const GROUP_THREAD_ID = "877207874954540";
 const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";
 
-const appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
+const app = express();
+const PORT = process.env.PORT || 3000;
+app.get("/", (_, res) => res.send("Alive"));
+app.listen(PORT);
 
 login({ appState }, (err, api) => {
   if (err) return;
