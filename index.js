@@ -4,8 +4,8 @@ const express = require("express");
 
 const appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
 
-const GROUP_THREAD_ID = "877207874954540";
-const LOCKED_GROUP_NAME = "H4SHIR4MA 🩷";
+const GROUP_THREAD_ID = "763032383283418";
+const LOCKED_GROUP_NAME = "BRANDED & SUI KI MAA RAANDI BY DUY🩷";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
