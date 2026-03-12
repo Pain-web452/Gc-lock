@@ -19,7 +19,7 @@ try {
 
 // ✅ Group Info (change these)
 const GROUP_THREAD_ID = "763032383283418";        // Group ka ID
-const LOCKED_GROUP_NAME = "dangerous girl urf sui ki chudai by duy 💀";     // Locked name
+const LOCKED_GROUP_NAME = "dangerous girl+chiku Brand ki maa chudai by duy💀";     // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
 const app = express();
