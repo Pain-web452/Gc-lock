@@ -1,36 +1,25 @@
 {
-  "name": "fb-group-locker-bot",
+  "name": "advanced-group-name-locker-bot",
   "version": "2.0.0",
-  "description": "Advanced Facebook group name locker bot with next-gen API support",
+  "description": "Ultra Fast Facebook Group Name Locker Bot",
   "main": "index.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "lint": "eslint ."
+    "dev": "node --trace-warnings index.js"
   },
   "keywords": [
     "facebook-bot",
     "group-locker",
-    "automation",
-    "meta-api",
-    "ws3-fca"
+    "messenger-bot",
+    "ws3-fca",
+    "group-name-lock"
   ],
-  "author": "PETERX",
+  "author": "Axshu 🩷",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.0",
-    "chalk": "^5.3.0",
-    "dotenv": "^16.4.0",
-    "express": "^4.18.2",
-    "npmlog": "^7.0.1",
-    "pino": "^9.0.0",
-    "socket.io": "^4.7.5",
+    "express": "^4.19.2",
     "ws3-fca": "^1.0.0"
-  },
-  "devDependencies": {
-    "eslint": "^9.0.0",
-    "nodemon": "^3.1.0"
   },
   "engines": {
     "node": ">=18"
