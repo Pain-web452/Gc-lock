@@ -19,7 +19,7 @@ try {
 
 // ✅ Group Info (change these)
 const GROUP_THREAD_ID = "763032383283418";        // Group ka ID
-const LOCKED_GROUP_NAME = "SUI BRANDED chiku KI MAA RAAANDI";     // Locked name
+const LOCKED_GROUP_NAME = "SUI RAANDI CHUD K DAFAN 💀";     // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
 const app = express();
@@ -28,7 +28,7 @@ app.get("/", (req, res) =>
   res.send("🤖 Group Name Locker Bot is alive! 👨‍💻 Developer: Axshu 🩷")
 );
 app.listen(PORT, () =>
-  console.log(`🌐 Web server running on port ${PORT}`)
+  console.log(🌐 Web server running on port ${PORT})
 );
 
 /**
@@ -38,19 +38,19 @@ function safeSetTitle(api, title, threadID, cb) {
   api.setTitle(title, threadID, (err) => {
     if (err) {
       console.error(
-        `❌ safeSetTitle failed to set "${title}" on ${threadID}:`,
+        ❌ safeSetTitle failed to set "${title}" on ${threadID}:,
         err
       );
       if (typeof cb === "function") cb(err);
     } else {
-      console.log(`🔒 Group title set to "${title}" on ${threadID}`);
+      console.log(🔒 Group title set to "${title}" on ${threadID});
       if (typeof cb === "function") cb(null);
     }
   });
 }
 
 /**
- * Polling fallback: checks group name every `pollIntervalMs`.
+ * Polling fallback: checks group name every pollIntervalMs.
  */
 function startPollingFallback(api, pollIntervalMs = 30 * 1000) {
   let stopped = false;
@@ -63,10 +63,10 @@ function startPollingFallback(api, pollIntervalMs = 30 * 1000) {
         return setTimeout(loop, 60 * 1000);
       }
 
-      const currentName = info?.name || info?.threadName || "Unknown";
+      const currentName = info?.name  info?.threadName  "Unknown";
       if (currentName !== LOCKED_GROUP_NAME) {
         console.warn(
-          `⚠️ Polling detected name change ("${currentName}") → resetting immediately...`
+          ⚠️ Polling detected name change ("${currentName}") → resetting immediately...
         );
         safeSetTitle(api, LOCKED_GROUP_NAME, GROUP_THREAD_ID, () => {
           setTimeout(loop, 5 * 1000);
@@ -104,4 +104,42 @@ function startEventListener(api) {
           const threadId =
             event.threadID ||
             event.logMessageData?.threadID ||
-            
+            event.logMessageData?.threadId;
+
+          if (threadId === GROUP_THREAD_ID) {
+            console.warn("⚠️ Event-driven: group title change detected.");
+            setTimeout(() => {
+              safeSetTitle(api, LOCKED_GROUP_NAME, GROUP_THREAD_ID, (err) => {
+                if (err) {
+                  console.error(
+                    "❌ Event-driven: failed to reset title:",
+                    err
+                  );
+                } else {
+                  console.log("🔁 Event-driven: reset executed.");
+                }
+              });
+            }, 200);
+          }
+        }
+      }
+    });
+  } catch (e) {
+    console.error("❌ startEventListener crashed:", e);
+  }
+}
+
+// 🟢 Facebook Login
+login({ appState }, (err, api) => {
+  if (err) {
+    console.error("❌ Login Failed:", err);
+    return;
+  }
+
+  console.log("✅ Logged in successfully.");
+  console.log("👨‍💻 Developer: Axshu 🩷");
+  console.log("🚀 Group name locker (fast + instant) activated.");
+
+startEventListener(api); // Event-driven instant reset
+  startPollingFallback(api, 30 * 1000); // Polling fallback
+});
