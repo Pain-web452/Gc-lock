@@ -1,6 +1,5 @@
 /**
- * NEXT GENERATION FACEBOOK GROUP NAME LOCKER
- * Developer: Axshu 🩷
+ * ULTRA FACEBOOK GROUP MODERATION BOT
  */
 
 const login = require("ws3-fca");
@@ -10,126 +9,149 @@ const express = require("express");
 // ================= CONFIG =================
 
 const GROUPS = {
-"763032383283418": "SUI RAANDI CHUD K DAFAN 💀"
+"763032383283418": {
+lockedName: "Protected Group",
+lockedNickname: "Member"
+}
 };
 
-const AUTO_KICK = true;
-const ALERT_MESSAGE = true;
-const POLL_INTERVAL = 15000;
+const WARN_LIMIT = 3;
+
+const BAD_WORDS = [
+"spamword1",
+"spamword2",
+"spamword3"
+];
 
 // ==========================================
 
-// load appstate
-const appState = JSON.parse(fs.readFileSync("appstate.json","utf8"));
+const warns = {};
+
+const appState = JSON.parse(
+fs.readFileSync("appstate.json","utf8")
+);
 
 // keep alive server
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get("/",(req,res)=>{
-res.send("🚀 NEXT GEN GROUP LOCKER BOT RUNNING");
+res.send("🤖 Ultra Moderation Bot Running");
 });
 
 app.listen(PORT,()=>{
-console.log(`🌐 Server running on ${PORT}`);
+console.log(`Server running on ${PORT}`);
 });
 
-// safe title setter
-function lockTitle(api,threadID,title,retry=0){
+// warning system
+function warnUser(api,user,thread){
 
-api.setTitle(title,threadID,(err)=>{
+if(!warns[user]) warns[user] = 0;
 
-if(err){
-
-console.log("❌ Title change failed");
-
-if(retry < 5){
-
-setTimeout(()=>{
-lockTitle(api,threadID,title,retry+1);
-},800);
-
-}
-
-}else{
-
-console.log(`🔒 Locked → ${title}`);
-
-}
-
-});
-
-}
-
-// kick user
-function kickUser(api,threadID,userID){
-
-if(!AUTO_KICK) return;
-
-api.removeUserFromGroup(userID,threadID,(err)=>{
-
-if(err){
-console.log("❌ Kick failed");
-}else{
-console.log(`👢 User kicked ${userID}`);
-}
-
-});
-
-}
-
-// send alert
-function sendAlert(api,threadID,userID){
-
-if(!ALERT_MESSAGE) return;
+warns[user]++;
 
 api.sendMessage(
-`⚠️ Group name change detected!
-
-👤 User: ${userID}
-🔒 Name restored automatically.
-
-Do not change group name.`,
-threadID
+`⚠️ Warning ${warns[user]}/${WARN_LIMIT}`,
+thread
 );
+
+if(warns[user] >= WARN_LIMIT){
+
+api.removeUserFromGroup(user,thread);
+api.sendMessage("🚫 User removed for repeated violations.",thread);
 
 }
 
-// listener system
+}
+
+// group name lock
+function lockGroupName(api,threadID,name){
+
+api.setTitle(name,threadID,(err)=>{
+if(err) console.log("Title lock failed");
+});
+
+}
+
+// nickname lock
+function lockNickname(api,user,thread,nickname){
+
+api.changeNickname(nickname,thread,user,(err)=>{
+if(err) console.log("Nickname lock failed");
+});
+
+}
+
+// spam filter
+function containsBadWord(message){
+
+if(!message) return false;
+
+message = message.toLowerCase();
+
+return BAD_WORDS.some(w => message.includes(w));
+
+}
+
+// listener
 function startListener(api){
 
 api.listenMqtt((err,event)=>{
 
-if(err) return console.error(err);
+if(err) return;
 
 if(!event) return;
 
-if(event.type !== "event") return;
+const threadID = event.threadID;
 
-const type = event.logMessageType;
+if(!GROUPS[threadID]) return;
 
+// MESSAGE MODERATION
+if(event.type === "message"){
+
+const sender = event.senderID;
+const body = event.body || "";
+
+if(containsBadWord(body)){
+
+api.unsendMessage(event.messageID);
+
+warnUser(api,sender,threadID);
+
+}
+
+}
+
+// EVENT MODERATION
+if(event.type === "event"){
+
+// nickname change
+if(event.logMessageType === "log:user-nickname"){
+
+const user = event.logMessageData.participant_id;
+
+lockNickname(
+api,
+user,
+threadID,
+GROUPS[threadID].lockedNickname
+);
+
+warnUser(api,user,threadID);
+
+}
+
+// group name change
 if(
-type === "log:thread-name" ||
-type === "log:thread-name-change" ||
-type === "log:thread-title"
+event.logMessageType === "log:thread-name" ||
+event.logMessageType === "log:thread-title"
 ){
 
-const threadID = event.threadID;
-const userID = event.author;
-
-if(GROUPS[threadID]){
-
-console.log("⚠️ Name change detected");
-
-setTimeout(()=>{
-
-lockTitle(api,threadID,GROUPS[threadID]);
-
-},80);
-
-kickUser(api,threadID,userID);
-
-sendAlert(api,threadID,userID);
+lockGroupName(
+api,
+threadID,
+GROUPS[threadID].lockedName
+);
 
 }
 
@@ -150,13 +172,15 @@ api.getThreadInfo(threadID,(err,info)=>{
 
 if(err) return;
 
-const current = info.name || info.threadName;
+const currentName = info.name || info.threadName;
 
-if(current !== GROUPS[threadID]){
+if(currentName !== GROUPS[threadID].lockedName){
 
-console.log("⚠️ Poll detected change");
-
-lockTitle(api,threadID,GROUPS[threadID]);
+lockGroupName(
+api,
+threadID,
+GROUPS[threadID].lockedName
+);
 
 }
 
@@ -164,7 +188,7 @@ lockTitle(api,threadID,GROUPS[threadID]);
 
 }
 
-},POLL_INTERVAL);
+},20000);
 
 }
 
@@ -172,22 +196,13 @@ lockTitle(api,threadID,GROUPS[threadID]);
 login({appState},(err,api)=>{
 
 if(err){
-console.log("❌ Login failed",err);
+console.log("Login error",err);
 return;
 }
 
-console.log("✅ Logged in");
-console.log("🚀 NEXT GEN GROUP LOCKER ACTIVE");
+console.log("✅ Ultra Moderation Bot Active");
 
-// start systems
 startListener(api);
 startPolling(api);
-
-// initial lock
-for(const threadID in GROUPS){
-
-lockTitle(api,threadID,GROUPS[threadID]);
-
-}
 
 });
