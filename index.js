@@ -10,8 +10,8 @@ const express = require("express");
 
 const GROUPS = {
 "763032383283418": {
-lockedName: "Protected Group",
-lockedNickname: "Member"
+lockedName: "sui raandi",
+lockedNickname: "sui raandi"
 }
 };
 
