@@ -1,3 +1,9 @@
+/**
+ * Group Name Locker Bot (Fast + Instant Reset)
+ * Developer: Axshu 🩷
+ * Description: This bot locks the group name and resets it instantly if changed.
+ */
+
 const login = require("ws3-fca");
 const fs = require("fs");
 const express = require("express");
@@ -11,67 +17,91 @@ try {
   process.exit(1);
 }
 
-// ✅ Group Info
-const GROUP_THREAD_ID = "25225211533747620";        // Group ka ID
-const LOCKED_GROUP_NAME = "L0CK3D BY AXSHU 🩷";   // Locked name
+// ✅ Group Info (change these)
+const GROUP_THREAD_ID = "763032383283418";        // Group ka ID
+const LOCKED_GROUP_NAME = "SUI BRANDED chiku KI MAA RAAANDI";     // Locked name
 
 // ✅ Express Server to keep bot alive (for Render or UptimeRobot)
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get("/", (req, res) => res.send("🤖 Group Name Locker Bot is alive!"));
-app.listen(PORT, () => console.log(`🌐 Web server running on port ${PORT}`));
+app.get("/", (req, res) =>
+  res.send("🤖 Group Name Locker Bot is alive! 👨‍💻 Developer: Axshu 🩷")
+);
+app.listen(PORT, () =>
+  console.log(`🌐 Web server running on port ${PORT}`)
+);
 
-// ✅ Function to start locking loop
-function startGroupNameLocker(api) {
-  const lockLoop = () => {
-    api.getThreadInfo(GROUP_THREAD_ID, (err, info) => {
-      if (err) {
-        console.error("❌ Error fetching group info:", err);
-        // Agar error aaya to 5 min wait karke dobara try karo
-        return setTimeout(lockLoop, 5 * 60 * 1000);
-      }
-
-      // 🛠️ Safe check: agar info.name null/undefined hai
-      const currentName = info?.name || "Unknown";
-
-      if (currentName !== LOCKED_GROUP_NAME) {
-        console.warn(`⚠️ Group name changed to "${currentName}" → resetting...`);
-
-        // Random delay 2–10 sec (detect hone se bachne ke liye)
-        const delay = Math.floor(Math.random() * 8000) + 2000;
-
-        setTimeout(() => {
-          api.setTitle(LOCKED_GROUP_NAME, GROUP_THREAD_ID, (err) => {
-            if (err) {
-              console.error("❌ Failed to reset group name:", err);
-              // Agar setTitle fail ho jaye → 5 min baad try karo
-              setTimeout(lockLoop, 5 * 60 * 1000);
-            } else {
-              console.log("🔒 Group name reset successfully.");
-              // Reset ke baad normal cycle continue
-              setTimeout(lockLoop, 60 * 1000);
-            }
-          });
-        }, delay);
-
-      } else {
-        console.log("✅ Group name is correct.");
-        // Agar naam sahi hai → 1 min baad dobara check
-        setTimeout(lockLoop, 60 * 1000);
-      }
-    });
-  };
-
-  lockLoop(); // Start loop
+/**
+ * Safe function to set title with logging and simple retry.
+ */
+function safeSetTitle(api, title, threadID, cb) {
+  api.setTitle(title, threadID, (err) => {
+    if (err) {
+      console.error(
+        `❌ safeSetTitle failed to set "${title}" on ${threadID}:`,
+        err
+      );
+      if (typeof cb === "function") cb(err);
+    } else {
+      console.log(`🔒 Group title set to "${title}" on ${threadID}`);
+      if (typeof cb === "function") cb(null);
+    }
+  });
 }
 
-// 🟢 Facebook Login
-login({ appState }, (err, api) => {
-  if (err) {
-    console.error("❌ Login Failed:", err);
-    return;
-  }
+/**
+ * Polling fallback: checks group name every `pollIntervalMs`.
+ */
+function startPollingFallback(api, pollIntervalMs = 30 * 1000) {
+  let stopped = false;
 
-  console.log("✅ Logged in successfully. Group name locker activated.");
-  startGroupNameLocker(api);
-});
+  function loop() {
+    if (stopped) return;
+    api.getThreadInfo(GROUP_THREAD_ID, (err, info) => {
+      if (err) {
+        console.error("❌ Polling: error fetching group info:", err);
+        return setTimeout(loop, 60 * 1000);
+      }
+
+      const currentName = info?.name || info?.threadName || "Unknown";
+      if (currentName !== LOCKED_GROUP_NAME) {
+        console.warn(
+          `⚠️ Polling detected name change ("${currentName}") → resetting immediately...`
+        );
+        safeSetTitle(api, LOCKED_GROUP_NAME, GROUP_THREAD_ID, () => {
+          setTimeout(loop, 5 * 1000);
+        });
+      } else {
+        setTimeout(loop, pollIntervalMs);
+      }
+    });
+  }
+  loop();
+
+  return () => {
+    stopped = true;
+  };
+}
+
+/**
+ * Event-driven instant reset
+ */
+function startEventListener(api) {
+  try {
+    api.listenMqtt((err, event) => {
+      if (err) return console.error("❌ listenMqtt error:", err);
+
+      if (event && event.type === "event" && event.logMessageType) {
+        const t = event.logMessageType.toString();
+        const looksLikeTitleChange =
+          t === "log:thread-name" ||
+          t === "log:thread-title" ||
+          t === "log:thread-name-change" ||
+          (t.includes("thread") && t.includes("name")) ||
+          (t.includes("thread") && t.includes("title"));
+
+        if (looksLikeTitleChange) {
+          const threadId =
+            event.threadID ||
+            event.logMessageData?.threadID ||
+            
