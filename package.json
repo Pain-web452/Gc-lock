@@ -1,27 +1,13 @@
 {
-  "name": "advanced-group-name-locker-bot",
-  "version": "2.0.0",
-  "description": "Ultra Fast Facebook Group Name Locker Bot",
-  "main": "index.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "node --trace-warnings index.js"
-  },
-  "keywords": [
-    "facebook-bot",
-    "group-locker",
-    "messenger-bot",
-    "ws3-fca",
-    "group-name-lock"
-  ],
-  "author": "Axshu 🩷",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.19.2",
-    "ws3-fca": "^1.0.0"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+"name": "nextgen-group-locker",
+"version": "3.0.0",
+"description": "Next Generation Facebook Group Name Locker",
+"main": "index.js",
+"scripts": {
+"start": "node index.js"
+},
+"dependencies": {
+"express": "^4.19.2",
+"ws3-fca": "^1.0.0"
+}
 }
