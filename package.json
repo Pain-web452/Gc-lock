@@ -1,7 +1,7 @@
 {
-"name": "nextgen-group-locker",
-"version": "3.0.0",
-"description": "Next Generation Facebook Group Name Locker",
+"name": "ultra-facebook-moderation-bot",
+"version": "1.0.0",
+"description": "Advanced Facebook Group Moderation Bot",
 "main": "index.js",
 "scripts": {
 "start": "node index.js"
