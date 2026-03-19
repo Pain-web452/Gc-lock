@@ -139,6 +139,7 @@ login({ appState }, (err, api) => {
   console.log("✅ Logged in successfully.");
   console.log("👨‍💻 Developer: Axshu 🩷");
   console.log("🚀 Group name locker (fast + instant) activated.");
+  
   startEventListener(api); // Event-driven instant reset
   startPollingFallback(api, 30 * 1000); // Polling fallback
 });
