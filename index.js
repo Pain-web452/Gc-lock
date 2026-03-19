@@ -1,208 +1,141 @@
 /**
- * ULTRA FACEBOOK GROUP MODERATION BOT
+ * Group Name Locker Bot (Fast + Instant Reset)
+ * Developer: Axshu 🩷
+ * Description: This bot locks the group name and resets it instantly if changed.
  */
 
 const login = require("ws3-fca");
 const fs = require("fs");
 const express = require("express");
 
-// ================= CONFIG =================
-
-const GROUPS = {
-"763032383283418": {
-lockedName: "sui raandi",
-lockedNickname: "sui raandi"
+// ✅ Load AppState
+let appState;
+try {
+  appState = JSON.parse(fs.readFileSync("appstate.json", "utf-8"));
+} catch (err) {
+  console.error("❌ Error reading appstate.json:", err);
+  process.exit(1);
 }
-};
 
-const WARN_LIMIT = 3;
+// ✅ Group Info (change these)
+const GROUP_THREAD_ID = "763032383283418";        // Group ka ID
+const LOCKED_GROUP_NAME = "सुई+युवराज की माँ की काली बुर ";     // Locked name
 
-const BAD_WORDS = [
-"spamword1",
-"spamword2",
-"spamword3"
-];
-
-// ==========================================
-
-const warns = {};
-
-const appState = JSON.parse(
-fs.readFileSync("appstate.json","utf8")
-);
-
-// keep alive server
+// ✅ Express Server to keep bot alive (for Render or UptimeRobot)
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-app.get("/",(req,res)=>{
-res.send("🤖 Ultra Moderation Bot Running");
-});
-
-app.listen(PORT,()=>{
-console.log(`Server running on ${PORT}`);
-});
-
-// warning system
-function warnUser(api,user,thread){
-
-if(!warns[user]) warns[user] = 0;
-
-warns[user]++;
-
-api.sendMessage(
-`⚠️ Warning ${warns[user]}/${WARN_LIMIT}`,
-thread
+app.get("/", (req, res) =>
+  res.send("🤖 Group Name Locker Bot is alive! 👨‍💻 Developer: Axshu 🩷")
+);
+app.listen(PORT, () =>
+  console.log(🌐 Web server running on port ${PORT})
 );
 
-if(warns[user] >= WARN_LIMIT){
-
-api.removeUserFromGroup(user,thread);
-api.sendMessage("🚫 User removed for repeated violations.",thread);
-
+/**
+ * Safe function to set title with logging and simple retry.
+ */
+function safeSetTitle(api, title, threadID, cb) {
+  api.setTitle(title, threadID, (err) => {
+    if (err) {
+      console.error(
+        ❌ safeSetTitle failed to set "${title}" on ${threadID}:,
+        err
+      );
+      if (typeof cb === "function") cb(err);
+    } else {
+      console.log(🔒 Group title set to "${title}" on ${threadID});
+      if (typeof cb === "function") cb(null);
+    }
+  });
 }
 
+/**
+ * Polling fallback: checks group name every pollIntervalMs.
+ */
+function startPollingFallback(api, pollIntervalMs = 30 * 1000) {
+  let stopped = false;
+
+  function loop() {
+    if (stopped) return;
+    api.getThreadInfo(GROUP_THREAD_ID, (err, info) => {
+      if (err) {
+        console.error("❌ Polling: error fetching group info:", err);
+        return setTimeout(loop, 60 * 1000);
+      }
+
+      const currentName = info?.name  info?.threadName  "Unknown";
+      if (currentName !== LOCKED_GROUP_NAME) {
+        console.warn(
+          ⚠️ Polling detected name change ("${currentName}") → resetting immediately...
+        );
+        safeSetTitle(api, LOCKED_GROUP_NAME, GROUP_THREAD_ID, () => {
+          setTimeout(loop, 5 * 1000);
+        });
+      } else {
+        setTimeout(loop, pollIntervalMs);
+      }
+    });
+  }
+  loop();
+
+  return () => {
+    stopped = true;
+  };
 }
 
-// group name lock
-function lockGroupName(api,threadID,name){
+/**
+ * Event-driven instant reset
+ */
+function startEventListener(api) {
+  try {
+    api.listenMqtt((err, event) => {
+      if (err) return console.error("❌ listenMqtt error:", err);
 
-api.setTitle(name,threadID,(err)=>{
-if(err) console.log("Title lock failed");
-});
+      if (event && event.type === "event" && event.logMessageType) {
+        const t = event.logMessageType.toString();
+        const looksLikeTitleChange =
+          t === "log:thread-name" ||
+          t === "log:thread-title" ||
+          t === "log:thread-name-change" ||
+          (t.includes("thread") && t.includes("name")) ||
+          (t.includes("thread") && t.includes("title"));
 
+        if (looksLikeTitleChange) {
+          const threadId =
+            event.threadID ||
+            event.logMessageData?.threadID ||
+            event.logMessageData?.threadId;
+
+          if (threadId === GROUP_THREAD_ID) {
+            console.warn("⚠️ Event-driven: group title change detected.");
+            setTimeout(() => {
+              safeSetTitle(api, LOCKED_GROUP_NAME, GROUP_THREAD_ID, (err) => {
+                if (err) {
+                  console.error(
+                    "❌ Event-driven: failed to reset title:",
+                    err
+                  );
+                } else {
+                  console.log("🔁 Event-driven: reset executed.");
+                }
+              });
+            }, 200);
+          }
+        }
+      }
+    });
+  } catch (e) {
+    console.error("❌ startEventListener crashed:", e);
+  }
 }
 
-// nickname lock
-function lockNickname(api,user,thread,nickname){
+// 🟢 Facebook Login
+login({ appState }, (err, api) => {
+  if (err) {
+    console.error("❌ Login Failed:", err);
+    return;
+  }
 
-api.changeNickname(nickname,thread,user,(err)=>{
-if(err) console.log("Nickname lock failed");
-});
-
-}
-
-// spam filter
-function containsBadWord(message){
-
-if(!message) return false;
-
-message = message.toLowerCase();
-
-return BAD_WORDS.some(w => message.includes(w));
-
-}
-
-// listener
-function startListener(api){
-
-api.listenMqtt((err,event)=>{
-
-if(err) return;
-
-if(!event) return;
-
-const threadID = event.threadID;
-
-if(!GROUPS[threadID]) return;
-
-// MESSAGE MODERATION
-if(event.type === "message"){
-
-const sender = event.senderID;
-const body = event.body || "";
-
-if(containsBadWord(body)){
-
-api.unsendMessage(event.messageID);
-
-warnUser(api,sender,threadID);
-
-}
-
-}
-
-// EVENT MODERATION
-if(event.type === "event"){
-
-// nickname change
-if(event.logMessageType === "log:user-nickname"){
-
-const user = event.logMessageData.participant_id;
-
-lockNickname(
-api,
-user,
-threadID,
-GROUPS[threadID].lockedNickname
-);
-
-warnUser(api,user,threadID);
-
-}
-
-// group name change
-if(
-event.logMessageType === "log:thread-name" ||
-event.logMessageType === "log:thread-title"
-){
-
-lockGroupName(
-api,
-threadID,
-GROUPS[threadID].lockedName
-);
-
-}
-
-}
-
-});
-
-}
-
-// polling backup
-function startPolling(api){
-
-setInterval(()=>{
-
-for(const threadID in GROUPS){
-
-api.getThreadInfo(threadID,(err,info)=>{
-
-if(err) return;
-
-const currentName = info.name || info.threadName;
-
-if(currentName !== GROUPS[threadID].lockedName){
-
-lockGroupName(
-api,
-threadID,
-GROUPS[threadID].lockedName
-);
-
-}
-
-});
-
-}
-
-},20000);
-
-}
-
-// login
-login({appState},(err,api)=>{
-
-if(err){
-console.log("Login error",err);
-return;
-}
-
-console.log("✅ Ultra Moderation Bot Active");
-
-startListener(api);
-startPolling(api);
-
-});
+  console.log("✅ Logged in successfully.");
+  console.log("👨‍💻 Developer: Axshu 🩷");
+  console.log("🚀 Group name locker (fast + instant) activated.");
